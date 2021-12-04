@@ -1,0 +1,213 @@
+Turbo Assembler	 Version 2.51	     11/03/21 12:25:18	    Page 1
+2.asm
+
+
+
+      1	0000			     STSEG SEGMENT PARA	STACK "STACK"
+      2	0000  40*(53 54	41 43 4B)    DB	64 DUP("STACK")
+      3	0140			     STSEG ENDS
+      4
+      5	0000			     DSEG SEGMENT PARA PUBLIC "DATA"
+      6	0000  48 49 2C 20 49 4E	50+  STARTMESSAGE DB 'HI, INPUT	A NUMBER FROM -32768 T0	32767, MAX - 6 SYMBOLS:	$'
+      7	      55 54 20 41 20 4E	55+
+      8	      4D 42 45 52 20 46	52+
+      9	      4F 4D 20 2D 33 32	37+
+     10	      36 38 20 54 30 20	33+
+     11	      32 37 36 37 2C 20	4D+
+     12	      41 58 20 2D 20 36	20+
+     13	      53 59 4D 42 4F 4C	53+
+     14	      3A 20 24
+     15	003B  4F 4F 4F 50 53 2C	20+  ERRORMESSAGE DB 'OOOPS, WRONG DATA$'
+     16	      57 52 4F 4E 47 20	44+
+     17	      41 54 41 24
+     18	004D  4F 56 45 52 46 4C	4F+  OFSUM DB 'OVERFLOW	WHILE ADDING 78$'
+     19	      57 20 57 48 49 4C	45+
+     20	      20 41 44 44 49 4E	47+
+     21	      20 37 38 24
+     22
+     23	0066  00		     NEGFLAG DB	0
+     24	0067  00		     CORRECT DB	0
+     25	      =	-8000		     MINNUM EQU	-32768
+     26	0068  0000		     NUMBER DW 0
+     27	006A  07 ?? 07*(0A)	     DUMP DB 7,?,7 DUP(0AH)
+     28	0073			     DSEG ENDS
+     29
+     30	0000			     CSEG SEGMENT PARA PUBLIC "CODE"
+     31				     ASSUME CS:CSEG, DS:DSEG, SS:STSEG
+     32
+     33	0000			     MAIN PROC FAR
+     34	0000  1E		     PUSH DS
+     35	0001  33 C0		     XOR AX,AX
+     36	0003  50		     PUSH AX
+     37				     ;INITIALIZATION OF	DS
+     38	0004  B8 0000s		     MOV AX,DSEG
+     39	0007  8E D8		     MOV DS,AX
+     40
+     41	0009  BA 0000r		     LEA DX, STARTMESSAGE
+     42	000C  B4 09		     MOV AH,9H
+     43	000E  CD 21		     INT 21H
+     44
+     45
+     46				     ;INPUT SYMBOLS
+     47	0010  B4 0A		     MOV AH, 0AH
+     48	0012  BA 006Ar		     LEA DX, DUMP
+     49	0015  CD 21		     INT 21H
+     50	0017  B0 0A		     MOV AL, 0AH
+     51	0019  CD 29		     INT 29H
+     52
+     53				     ;CONVERT TO NUMBER
+     54	001B  BE 006Cr		     LEA SI, DUMP +2
+     55	001E  80 3C 2D		     CMP BYTE PTR [SI],	"-"
+     56	0021  75 06		     JNZ A1
+     57	0023  C6 06 0066r 01	     MOV NEGFLAG,1
+Turbo Assembler	 Version 2.51	     11/03/21 12:25:18	    Page 2
+2.asm
+
+
+
+     58	0028  46		     INC SI
+     59
+     60	0029			     A1:
+     61	0029  33 C0		     XOR AX,AX
+     62	002B  BB 000A		     MOV BX,10
+     63
+     64	002E			     A2:
+     65	002E  8A 0C		     MOV CL, [SI]
+     66	0030  80 F9 0D		     CMP CL, 0DH
+     67	0033  74 2E		     JZ	AEND
+     68
+     69	0035  80 F9 30		     CMP CL,'0'
+     70	0038  72 13		     JB	ERROR
+     71	003A  80 F9 39		     CMP CL, '9'
+     72	003D  77 0E		     JA	ERROR
+     73
+     74	003F  80 E9 30		     SUB CL, '0'
+     75	0042  F7 EB		     IMUL BX
+     76	0044  70 07		     JO	ERROR
+     77	0046  03 C1		     ADD AX, CX
+     78	0048  70 0D		     JO	MIN
+     79	004A  46		     INC SI
+     80	004B  EB E1		     JMP A2
+     81
+     82	004D			     ERROR:
+     83	004D  BA 003Br		     LEA DX, ERRORMESSAGE
+     84	0050  B4 09		     MOV AH,9H
+     85	0052  CD 21		     INT 21H
+     86	0054  EB 29 90		     JMP ENDL
+     87
+     88	0057			     MIN:
+     89	0057  3D 8000		     CMP AX, MINNUM
+     90	005A  75 F1		     JNE ERROR
+     91	005C  80 3E 006Cr 2D	     CMP BYTE PTR [DUMP	+2], "-"
+     92	0061  75 EA		     JNE ERROR
+     93
+     94	0063			     AEND:
+     95	0063  80 3E 0066r 01	     CMP NEGFLAG, 1
+     96	0068  75 05		     JNE A3
+     97	006A  F7 D8		     NEG AX
+     98	006C  EB 01 90		     JMP A3
+     99	006F			     A3:
+    100	006F  A3 0068r		     MOV NUMBER,AX
+    101	0072  E8 000B		     CALL CALCULATION
+    102	0075  80 3E 0067r 01	     CMP CORRECT, 1
+    103	007A  75 03		     JNE ENDL
+    104	007C  E8 001B		     CALL DIGITOUTPUT
+    105	007F			     ENDL:
+    106	007F  CB		     RET
+    107	0080			     MAIN ENDP
+    108
+    109	0080			     CALCULATION PROC NEAR
+    110	0080  C6 06 0067r 01	     MOV CORRECT, 1
+    111	0085  83 06 0068r 4E	     ADD NUMBER, 78
+    112	008A  70 01		     JO	OVERFLOW
+    113	008C  C3		     RET
+    114	008D			     OVERFLOW:
+Turbo Assembler	 Version 2.51	     11/03/21 12:25:18	    Page 3
+2.asm
+
+
+
+    115	008D  C6 06 0067r 00	     MOV CORRECT, 0
+    116	0092  BA 004Dr		     LEA DX, OFSUM
+    117	0095  B4 09		     MOV AH, 9H
+    118	0097  CD 21		     INT 21H
+    119	0099  C3		     RET
+    120	009A			     CALCULATION ENDP
+    121
+    122	009A			     DIGITOUTPUT PROC NEAR
+    123	009A  8B 1E 0068r	     MOV BX, NUMBER
+    124	009E  0B DB		     OR	BX,BX
+    125	00A0  79 06		     JNS M1
+    126	00A2  B0 2D		     MOV AL, '-'
+    127	00A4  CD 29		     INT 29H
+    128	00A6  F7 DB		     NEG BX
+    129
+    130	00A8			     M1:
+    131	00A8  8B C3		     MOV AX,BX
+    132	00AA  33 C9		     XOR CX, CX
+    133	00AC  BB 000A		     MOV BX, 10
+    134
+    135	00AF			     M2:
+    136	00AF  33 D2		     XOR DX,DX
+    137	00B1  F7 F3		     DIV BX
+    138	00B3  80 C2 30		     ADD DL, '0'
+    139	00B6  52		     PUSH DX
+    140	00B7  41		     INC CX
+    141	00B8  85 C0		     TEST AX,AX
+    142	00BA  75 F3		     JNZ M2
+    143
+    144	00BC			     M3:
+    145	00BC  58		     POP AX
+    146	00BD  CD 29		     INT 29H
+    147	00BF  E2 FB		     LOOP M3
+    148	00C1  C3		     RET
+    149	00C2			     DIGITOUTPUT ENDP
+    150
+    151
+    152	00C2			     CSEG ENDS
+    153				     END MAIN
+Turbo Assembler	 Version 2.51	     11/03/21 12:25:18	    Page 4
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??DATE				  Text	 "11/03/21"
+??FILENAME			  Text	 "2	  "
+??TIME				  Text	 "12:25:18"
+??VERSION			  Number 0205
+@CPU				  Text	 0101H
+@CURSEG				  Text	 CSEG
+@FILENAME			  Text	 2
+@WORDSIZE			  Text	 2
+A1				  Near	 CSEG:0029
+A2				  Near	 CSEG:002E
+A3				  Near	 CSEG:006F
+AEND				  Near	 CSEG:0063
+CALCULATION			  Near	 CSEG:0080
+CORRECT				  Byte	 DSEG:0067
+DIGITOUTPUT			  Near	 CSEG:009A
+DUMP				  Byte	 DSEG:006A
+ENDL				  Near	 CSEG:007F
+ERROR				  Near	 CSEG:004D
+ERRORMESSAGE			  Byte	 DSEG:003B
+M1				  Near	 CSEG:00A8
+M2				  Near	 CSEG:00AF
+M3				  Near	 CSEG:00BC
+MAIN				  Far	 CSEG:0000
+MIN				  Near	 CSEG:0057
+MINNUM				  Number -8000
+NEGFLAG				  Byte	 DSEG:0066
+NUMBER				  Word	 DSEG:0068
+OFSUM				  Byte	 DSEG:004D
+OVERFLOW			  Near	 CSEG:008D
+STARTMESSAGE			  Byte	 DSEG:0000
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+CSEG				  16  00C2 Para	  Public  CODE
+DSEG				  16  0073 Para	  Public  DATA
+STSEG				  16  0140 Para	  Stack	  STACK
+
