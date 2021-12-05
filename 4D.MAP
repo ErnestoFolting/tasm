@@ -1,0 +1,15 @@
+
+ Start  Stop   Length Name               Class
+
+ 00000H 0013FH 00140H STSEG              STACK
+ 00140H 00358H 00219H DSEG               DATA
+ 00360H 005ADH 0024EH CSEG               CODE
+
+  Address         Publics by Name
+
+
+  Address         Publics by Value
+
+
+Program entry point at 0036:0000
+
