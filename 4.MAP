@@ -3,7 +3,7 @@
 
  00000H 0013FH 00140H STSEG              STACK
  00140H 00274H 00135H DSEG               DATA
- 00280H 004D8H 00259H CSEG               CODE
+ 00280H 004D4H 00255H CSEG               CODE
 
   Address         Publics by Name
 
