@@ -3,7 +3,13 @@
 
  00000H 0013FH 00140H STSEG              STACK
  00140H 001B2H 00073H DSEG               DATA
- 001C0H 00281H 000C2H CSEG               CODE
+ 001C0H 0027FH 000C0H CSEG               CODE
+
+  Address         Publics by Name
+
+
+  Address         Publics by Value
+
 
 Program entry point at 001C:0000
 
