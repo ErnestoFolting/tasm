@@ -1,0 +1,600 @@
+Turbo Assembler	 Version 2.51	     01/06/22 21:11:29	    Page 1
+3m.asm
+
+
+
+      1					 PRINTZ	MACRO ZINPUT
+      2					 LOCAL M1, M2, M3
+      3					 MOV BX, ZINPUT
+      4					 OR BX,BX
+      5					 JNS M1
+      6					 MOV AL, '-'
+      7					 INT 29H
+      8					 NEG BX
+      9
+     10					 M1:
+     11					 MOV AX,BX
+     12					 XOR CX, CX
+     13					 MOV BX, 10
+     14
+     15					 M2:
+     16					 XOR DX,DX
+     17					 DIV BX
+     18					 ADD DL, '0'
+     19					 PUSH DX
+     20					 INC CX
+     21					 TEST AX,AX
+     22					 JNZ M2
+     23
+     24					 M3:
+     25					 POP AX
+     26					 INT 29H
+     27					 LOOP M3
+     28					 ENDM
+     29
+     30	    0000			 STSEG SEGMENT PARA STACK "STACK"
+     31	    0000  40*(53 54 41 43 4B)	 DB 64 DUP("STACK")
+     32	    0140			 STSEG ENDS
+     33
+     34	    0000			 DSEG SEGMENT PARA PUBLIC "DATA"
+     35	    0000  48 65	6C 6C 6F 2C 20+	 STARTMESSAGE DB 'Hello, INPUT A NUMBER	FROM -32768 T0 32767, MAX - 6 SYMBOLS: $'
+     36		  49 4E	50 55 54 20 41+
+     37		  20 4E	55 4D 42 45 52+
+     38		  20 46	52 4F 4D 20 2D+
+     39		  33 32	37 36 38 20 54+
+     40		  30 20	33 32 37 36 37+
+     41		  2C 20	4D 41 58 20 2D+
+     42		  20 36	20 53 59 4D 42+
+     43		  4F 4C	53 3A 20 24
+     44	    003E  4F 4F	4F 50 53 2C 20+	 ERRORMESSAGE DB 'OOOPS, WRONG DATA$'
+     45		  57 52	4F 4E 47 20 44+
+     46		  41 54	41 24
+     47	    0050  20 52	45 4D 4E 41 4E+	 FRACMESSAGE DB	' REMNANT PART:	$'
+     48		  54 20	50 41 52 54 3A+
+     49		  20 24
+     50	    0060  20 5A	20 3D 20 24	 RESULTMESSAGE DB ' Z =	$'
+     51	    0066  20 44	49 56 20 54 4F+	 DIVTOMESSAGE DB ' DIV TO: $'
+     52		  3A 20	24
+     53
+     54	    0070  0000			 X DW 0
+     55	    0072  0000			 Z DW 0
+     56	    0074  0000			 EXP1PART1 DW 0
+     57	    0076  0000			 EXP1PART2 DW 0
+Turbo Assembler	 Version 2.51	     01/06/22 21:11:29	    Page 2
+3m.asm
+
+
+
+     58	    0078  0000			 EXP3PART1 DW 0
+     59	    007A  0000			 EXP3PART2 DW 0
+     60	    007C  0000			 INTGLOBAL DW 0
+     61	    007E  0000			 REMNANTGLOBAL DW 0
+     62
+     63	    0080  0000			 CURRENTDIGIT DW 0
+     64	    0082  0000			 CURRENTPART DW	0
+     65	    0084  0000			 FRACTIONALRESULT DW 0
+     66	    0086  0000			 ZFRAC DW 0
+     67
+     68	    0088  0001			 CONVERTATIONCORRECT DW	1
+     69
+     70	    008A  07 00	07*(0D)		 XSTRING DB 7, 0, 7 DUP(0DH)
+     71
+     72		  = -8000		 MINNUM	EQU -32768
+     73		  = 0000		 TOCOMP	EQU 0
+     74
+     75	    0093			 DSEG ENDS
+     76
+     77	    0000			 CSEG SEGMENT PARA PUBLIC "CODE"
+     78					 .386
+     79
+     80					 ASSUME	CS:CSEG, DS:DSEG, SS:STSEG
+     81
+     82	    0000			 MAIN PROC FAR
+     83
+     84	    0000  1E			 PUSH DS
+     85	    0001  33 C0			 XOR AX,AX
+     86	    0003  50			 PUSH AX
+     87					 ;INITIALIZATION OF DS
+     88	    0004  B8 0000s		 MOV AX,DSEG
+     89	    0007  8E D8			 MOV DS,AX
+     90
+     91	    0009  BA 0000r		 LEA DX, STARTMESSAGE
+     92	    000C  B4 09			 MOV AH,9H
+     93	    000E  CD 21			 INT 21H
+     94
+     95					 ;INPUT	SYMBOLS
+     96	    0010  B4 0A			 MOV AH, 0AH
+     97	    0012  BA 008Ar		 LEA DX, XSTRING
+     98	    0015  CD 21			 INT 21H
+     99	    0017  E8 0010		 CALL PRINTNEWLINE
+    100
+    101	    001A  E8 001D		 CALL CONVERTATION
+    102	    001D  83 3E	0088r 01	 CMP CONVERTATIONCORRECT, 1
+    103	    0022  75 05	90 90		 JNE INCORRECT
+    104	    0026  E8 006F		 CALL CALCULATE
+    105	    0029			 INCORRECT:
+    106	    0029  CB			 RET
+    107
+    108	    002A			 MAIN ENDP
+    109
+    110	    002A			 PRINTNEWLINE PROC NEAR
+    111	    002A  B0 0A			 MOV AL, 0AH
+    112	    002C  CD 29			 INT 29H
+    113	    002E  C3			 RET
+    114	    002F			 PRINTNEWLINE ENDP
+Turbo Assembler	 Version 2.51	     01/06/22 21:11:29	    Page 3
+3m.asm
+
+
+
+    115
+    116	    002F			 PRINTERROR PROC NEAR
+    117	    002F  BA 003Er		 LEA DX, ERRORMESSAGE
+    118	    0032  B4 09			 MOV AH, 9H
+    119	    0034  CD 21			 INT 21H
+    120	    0036  E8 FFF1		 CALL PRINTNEWLINE
+    121	    0039  C3			 RET
+    122	    003A			 PRINTERROR ENDP
+    123
+    124	    003A			 CONVERTATION PROC NEAR
+    125					 ;CONVERT TO NUMBER
+    126	    003A  BE 008Cr		 LEA SI, XSTRING +2
+    127	    003D  80 3C	2D		 CMP BYTE PTR [SI], "-"
+    128	    0040  75 03	90 90		 JNE A1
+    129	    0044  46			 INC SI
+    130
+    131	    0045			 A1:
+    132	    0045  33 C0			 XOR AX,AX
+    133	    0047  BB 000A		 MOV BX,10
+    134
+    135	    004A			 A2:
+    136	    004A  8A 0C			 MOV CL, [SI]
+    137	    004C  80 F9	0D		 CMP CL, 0DH
+    138	    004F  74 38	90 90		 JZ NEGATIVE
+    139
+    140	    0053  80 F9	30		 CMP CL,'0'
+    141	    0056  72 1B	90 90		 JB ERROR
+    142	    005A  80 F9	39		 CMP CL, '9'
+    143	    005D  77 14	90 90		 JA ERROR
+    144
+    145	    0061  80 E9	30		 SUB CL, '0'
+    146	    0064  F7 EB			 IMUL BX
+    147	    0066  70 0B	90 90		 JO ERROR
+    148	    006A  03 C1			 ADD AX, CX
+    149	    006C  70 0F	90 90		 JO MIN
+    150	    0070  46			 INC SI
+    151	    0071  EB D7			 JMP A2
+    152	    0073			 ERROR:
+    153	    0073  E8 FFB9		 CALL PRINTERROR
+    154	    0076  C7 06	0088r 0000	 MOV CONVERTATIONCORRECT, 0
+    155	    007C  C3			 RET
+    156	    007D			 MIN:
+    157	    007D  3D 8000		 CMP AX, MINNUM
+    158	    0080  75 F1			 JNE ERROR
+    159	    0082  80 3E	008Cr 2D	 CMP BYTE PTR [XSTRING + 2], "-"
+    160	    0087  75 EA			 JNE ERROR
+    161	    0089			 NEGATIVE:
+    162	    0089  80 3E	008Cr 2D	 CMP BYTE PTR [XSTRING+2], "-"
+    163	    008E  75 04	90 90		 JNE A3
+    164	    0092  F7 D8			 NEG AX
+    165	    0094			 A3:
+    166	    0094  A3 0070r		 MOV X,AX
+    167	    0097  C3			 RET
+    168	    0098			 CONVERTATION ENDP
+    169
+    170	    0098			 CALCULATE PROC	NEAR
+    171	    0098  83 3E	0070r 00	 CMP X,	0
+Turbo Assembler	 Version 2.51	     01/06/22 21:11:29	    Page 4
+3m.asm
+
+
+
+    172	    009D  74 0E	90 90		 JE EXPRESSION2
+    173	    00A1  7C 06	90 90		 JL EXPRESSION1
+    174	    00A5  7F 0A	90 90		 JG EXPRESSION3
+    175
+    176	    00A9			 EXPRESSION1:
+    177	    00A9  E8 0009		 CALL CALCULATE1
+    178	    00AC  C3			 RET
+    179	    00AD			 EXPRESSION2:
+    180	    00AD  E8 00D5		 CALL CALCULATE2
+    181	    00B0  C3			 RET
+    182	    00B1			 EXPRESSION3:
+    183	    00B1  E8 0101		 CALL CALCULATE3
+    184	    00B4  C3			 RET
+    185	    00B5			 CALCULATE ENDP
+    186
+    187
+    188
+    189
+    190	    00B5			 CALCULATE1 PROC NEAR
+    191					 ;x^3-7x
+    192	    00B5  A1 0070r		 MOV AX,X
+    193	    00B8  F7 2E	0070r		 IMUL X
+    194	    00BC  0F 80	00C1		 JO ERR1
+    195	    00C0  F7 2E	0070r		 IMUL X
+    196	    00C4  0F 80	00B9		 JO ERR1
+    197	    00C8  8B 1E	0070r		 MOV BX,X
+    198	    00CC  6B DB	07		 IMUL BX, 7
+    199	    00CF  0F 80	00AE		 JO ERR1
+    200	    00D3  2B C3			 SUB AX, BX
+    201	    00D5  0F 80	00A8		 JO ERR1
+    202	    00D9  A3 0074r		 MOV EXP1PART1,	AX
+    203
+    204					 ;X^2 +	17
+    205	    00DC  A1 0070r		 MOV AX,X
+    206	    00DF  F7 2E	0070r		 IMUL X
+    207	    00E3  0F 80	009A		 JO ERR1
+    208	    00E7  05 0011		 ADD AX, 17
+    209	    00EA  0F 80	0093		 JO ERR1
+    210	    00EE  A3 0076r		 MOV EXP1PART2,	AX
+    211
+    212	    00F1  33 D2			 XOR DX,DX
+    213	    00F3  A1 0074r		 MOV AX, EXP1PART1
+    214	    00F6  8B 1E	0076r		 MOV BX, EXP1PART2
+    215	    00FA  99			 CWD
+    216	    00FB  F7 FB			 IDIV BX
+    217	    00FD  0F 80	0080		 JO ERR1
+    218	    0101  A3 007Cr		 MOV INTGLOBAL,	AX
+    219	    0104  89 16	007Er		 MOV REMNANTGLOBAL, DX
+    220
+    221
+    222	    0108  BA 0060r		 LEA DX, RESULTMESSAGE
+    223	    010B  B4 09			 MOV AH, 9H
+    224	    010D  CD 21			 INT 21H
+    225
+    226	    010F  A1 007Cr		 MOV AX, INTGLOBAL
+    227	    0112  A3 0072r		 MOV Z,	AX
+    228					 PRINTZ	Z
+Turbo Assembler	 Version 2.51	     01/06/22 21:11:29	    Page 5
+3m.asm
+
+
+
+1   229	    0115  8B 1E	0072r		 MOV BX, Z
+1   230	    0119  0B DB			 OR BX,BX
+1   231	    011B  79 08	90 90		 JNS ??0000
+1   232	    011F  B0 2D			 MOV AL, '-'
+1   233	    0121  CD 29			 INT 29H
+1   234	    0123  F7 DB			 NEG BX
+1   235	    0125			 ??0000:
+1   236	    0125  8B C3			 MOV AX,BX
+1   237	    0127  33 C9			 XOR CX, CX
+1   238	    0129  BB 000A		 MOV BX, 10
+1   239	    012C			 ??0001:
+1   240	    012C  33 D2			 XOR DX,DX
+1   241	    012E  F7 F3			 DIV BX
+1   242	    0130  80 C2	30		 ADD DL, '0'
+1   243	    0133  52			 PUSH DX
+1   244	    0134  41			 INC CX
+1   245	    0135  85 C0			 TEST AX,AX
+1   246	    0137  75 F3			 JNZ ??0001
+1   247	    0139			 ??0002:
+1   248	    0139  58			 POP AX
+1   249	    013A  CD 29			 INT 29H
+1   250	    013C  E2 FB			 LOOP ??0002
+    251
+    252	    013E  A1 007Er		 MOV AX, REMNANTGLOBAL
+    253	    0141  A3 0086r		 MOV ZFRAC, AX
+    254	    0144  E8 013E		 CALL PRINTZFRAC
+    255
+    256	    0147  BA 0066r		 LEA DX, DIVTOMESSAGE
+    257	    014A  B4 09			 MOV AH, 9H
+    258	    014C  CD 21			 INT 21H
+    259	    014E  A1 0076r		 MOV AX, EXP1PART2
+    260	    0151  A3 0072r		 MOV Z,	AX
+    261					 PRINTZ	Z
+1   262	    0154  8B 1E	0072r		 MOV BX, Z
+1   263	    0158  0B DB			 OR BX,BX
+1   264	    015A  79 08	90 90		 JNS ??0003
+1   265	    015E  B0 2D			 MOV AL, '-'
+1   266	    0160  CD 29			 INT 29H
+1   267	    0162  F7 DB			 NEG BX
+1   268	    0164			 ??0003:
+1   269	    0164  8B C3			 MOV AX,BX
+1   270	    0166  33 C9			 XOR CX, CX
+1   271	    0168  BB 000A		 MOV BX, 10
+1   272	    016B			 ??0004:
+1   273	    016B  33 D2			 XOR DX,DX
+1   274	    016D  F7 F3			 DIV BX
+1   275	    016F  80 C2	30		 ADD DL, '0'
+1   276	    0172  52			 PUSH DX
+1   277	    0173  41			 INC CX
+1   278	    0174  85 C0			 TEST AX,AX
+1   279	    0176  75 F3			 JNZ ??0004
+1   280	    0178			 ??0005:
+1   281	    0178  58			 POP AX
+1   282	    0179  CD 29			 INT 29H
+1   283	    017B  E2 FB			 LOOP ??0005
+    284	    017D  E8 FEAA		 CALL PRINTNEWLINE
+    285
+Turbo Assembler	 Version 2.51	     01/06/22 21:11:29	    Page 6
+3m.asm
+
+
+
+    286	    0180  C3			 RET
+    287	    0181			 ERR1:
+    288	    0181  E8 FEAB		 CALL PRINTERROR
+    289	    0184  C3			 RET
+    290	    0185			 CALCULATE1 ENDP
+    291
+    292
+    293
+    294
+    295	    0185			 CALCULATE2 PROC NEAR
+    296	    0185  C7 06	0072r 007F	 MOV Z,	127
+    297					 PRINTZ	Z
+1   298	    018B  8B 1E	0072r		 MOV BX, Z
+1   299	    018F  0B DB			 OR BX,BX
+1   300	    0191  79 08	90 90		 JNS ??0006
+1   301	    0195  B0 2D			 MOV AL, '-'
+1   302	    0197  CD 29			 INT 29H
+1   303	    0199  F7 DB			 NEG BX
+1   304	    019B			 ??0006:
+1   305	    019B  8B C3			 MOV AX,BX
+1   306	    019D  33 C9			 XOR CX, CX
+1   307	    019F  BB 000A		 MOV BX, 10
+1   308	    01A2			 ??0007:
+1   309	    01A2  33 D2			 XOR DX,DX
+1   310	    01A4  F7 F3			 DIV BX
+1   311	    01A6  80 C2	30		 ADD DL, '0'
+1   312	    01A9  52			 PUSH DX
+1   313	    01AA  41			 INC CX
+1   314	    01AB  85 C0			 TEST AX,AX
+1   315	    01AD  75 F3			 JNZ ??0007
+1   316	    01AF			 ??0008:
+1   317	    01AF  58			 POP AX
+1   318	    01B0  CD 29			 INT 29H
+1   319	    01B2  E2 FB			 LOOP ??0008
+    320	    01B4  C3			 RET
+    321	    01B5			 CALCULATE2 ENDP
+    322
+    323
+    324
+    325
+    326	    01B5			 CALCULATE3 PROC NEAR
+    327					 ;x^2+8x-7
+    328	    01B5  A1 0070r		 MOV AX,X
+    329	    01B8  F7 2E	0070r		 IMUL X
+    330	    01BC  0F 80	00C1		 JO ERR3
+    331	    01C0  8B 1E	0070r		 MOV BX,X
+    332	    01C4  6B DB	08		 IMUL BX,8
+    333	    01C7  0F 80	00B6		 JO ERR3
+    334	    01CB  03 C3			 ADD AX, BX
+    335	    01CD  0F 80	00B0		 JO ERR3
+    336	    01D1  2D 0007		 SUB AX, 7
+    337	    01D4  0F 80	00A9		 JO ERR3
+    338	    01D8  A3 0078r		 MOV EXP3PART1,	AX
+    339
+    340
+    341					 ;x^3
+    342	    01DB  A1 0070r		 MOV AX,X
+Turbo Assembler	 Version 2.51	     01/06/22 21:11:29	    Page 7
+3m.asm
+
+
+
+    343	    01DE  F7 2E	0070r		 IMUL X
+    344	    01E2  0F 80	009B		 JO ERR3
+    345	    01E6  F7 2E	0070r		 IMUL X
+    346	    01EA  0F 80	0093		 JO ERR3
+    347	    01EE  A3 007Ar		 MOV EXP3PART2,	AX
+    348
+    349	    01F1  33 D2			 XOR DX,DX
+    350	    01F3  A1 0078r		 MOV AX, EXP3PART1
+    351	    01F6  8B 1E	007Ar		 MOV BX, EXP3PART2
+    352	    01FA  99			 CWD
+    353	    01FB  F7 FB			 IDIV BX
+    354	    01FD  0F 80	0080		 JO ERR3
+    355	    0201  A3 007Cr		 MOV INTGLOBAL,	AX
+    356	    0204  89 16	007Er		 MOV REMNANTGLOBAL, DX
+    357
+    358	    0208  BA 0060r		 LEA DX, RESULTMESSAGE
+    359	    020B  B4 09			 MOV AH, 9H
+    360	    020D  CD 21			 INT 21H
+    361
+    362	    020F  A1 007Cr		 MOV AX, INTGLOBAL
+    363	    0212  A3 0072r		 MOV Z,	AX
+    364					 PRINTZ	Z
+1   365	    0215  8B 1E	0072r		 MOV BX, Z
+1   366	    0219  0B DB			 OR BX,BX
+1   367	    021B  79 08	90 90		 JNS ??0009
+1   368	    021F  B0 2D			 MOV AL, '-'
+1   369	    0221  CD 29			 INT 29H
+1   370	    0223  F7 DB			 NEG BX
+1   371	    0225			 ??0009:
+1   372	    0225  8B C3			 MOV AX,BX
+1   373	    0227  33 C9			 XOR CX, CX
+1   374	    0229  BB 000A		 MOV BX, 10
+1   375	    022C			 ??000A:
+1   376	    022C  33 D2			 XOR DX,DX
+1   377	    022E  F7 F3			 DIV BX
+1   378	    0230  80 C2	30		 ADD DL, '0'
+1   379	    0233  52			 PUSH DX
+1   380	    0234  41			 INC CX
+1   381	    0235  85 C0			 TEST AX,AX
+1   382	    0237  75 F3			 JNZ ??000A
+1   383	    0239			 ??000B:
+1   384	    0239  58			 POP AX
+1   385	    023A  CD 29			 INT 29H
+1   386	    023C  E2 FB			 LOOP ??000B
+    387
+    388	    023E  A1 007Er		 MOV AX, REMNANTGLOBAL
+    389	    0241  A3 0086r		 MOV ZFRAC, AX
+    390	    0244  E8 003E		 CALL PRINTZFRAC
+    391
+    392
+    393	    0247  BA 0066r		 LEA DX, DIVTOMESSAGE
+    394	    024A  B4 09			 MOV AH, 9H
+    395	    024C  CD 21			 INT 21H
+    396	    024E  A1 007Ar		 MOV AX, EXP3PART2
+    397	    0251  A3 0072r		 MOV Z,	AX
+    398					 PRINTZ	Z
+1   399	    0254  8B 1E	0072r		 MOV BX, Z
+Turbo Assembler	 Version 2.51	     01/06/22 21:11:29	    Page 8
+3m.asm
+
+
+
+1   400	    0258  0B DB			 OR BX,BX
+1   401	    025A  79 08	90 90		 JNS ??000C
+1   402	    025E  B0 2D			 MOV AL, '-'
+1   403	    0260  CD 29			 INT 29H
+1   404	    0262  F7 DB			 NEG BX
+1   405	    0264			 ??000C:
+1   406	    0264  8B C3			 MOV AX,BX
+1   407	    0266  33 C9			 XOR CX, CX
+1   408	    0268  BB 000A		 MOV BX, 10
+1   409	    026B			 ??000D:
+1   410	    026B  33 D2			 XOR DX,DX
+1   411	    026D  F7 F3			 DIV BX
+1   412	    026F  80 C2	30		 ADD DL, '0'
+1   413	    0272  52			 PUSH DX
+1   414	    0273  41			 INC CX
+1   415	    0274  85 C0			 TEST AX,AX
+1   416	    0276  75 F3			 JNZ ??000D
+1   417	    0278			 ??000E:
+1   418	    0278  58			 POP AX
+1   419	    0279  CD 29			 INT 29H
+1   420	    027B  E2 FB			 LOOP ??000E
+    421	    027D  E8 FDAA		 CALL PRINTNEWLINE
+    422
+    423	    0280  C3			 RET
+    424	    0281			 ERR3:
+    425	    0281  E8 FDAB		 CALL PRINTERROR
+    426	    0284  C3			 RET
+    427	    0285			 CALCULATE3 ENDP
+    428
+    429
+    430	    0285			 PRINTZFRAC PROC NEAR
+    431	    0285  BA 0050r		 LEA DX, FRACMESSAGE
+    432	    0288  B4 09			 MOV AH, 9H
+    433	    028A  CD 21			 INT 21H
+    434	    028C  8B 1E	0086r		 MOV BX, ZFRAC
+    435	    0290  0B DB			 OR BX,BX
+    436	    0292  79 08	90 90		 JNS M4
+    437	    0296  B0 2D			 MOV AL, '-'
+    438	    0298  CD 29			 INT 29H
+    439	    029A  F7 DB			 NEG BX
+    440
+    441	    029C			 M4:
+    442	    029C  8B C3			 MOV AX,BX
+    443	    029E  33 C9			 XOR CX, CX
+    444	    02A0  BB 000A		 MOV BX, 10
+    445
+    446	    02A3			 M5:
+    447	    02A3  33 D2			 XOR DX,DX
+    448	    02A5  F7 F3			 DIV BX
+    449	    02A7  80 C2	30		 ADD DL, '0'
+    450	    02AA  52			 PUSH DX
+    451	    02AB  41			 INC CX
+    452	    02AC  85 C0			 TEST AX,AX
+    453	    02AE  75 F3			 JNZ M5
+    454
+    455	    02B0			 M6:
+    456	    02B0  58			 POP AX
+Turbo Assembler	 Version 2.51	     01/06/22 21:11:29	    Page 9
+3m.asm
+
+
+
+    457	    02B1  CD 29			 INT 29H
+    458	    02B3  E2 FB			 LOOP M6
+    459	    02B5  C3			 RET
+    460	    02B6			 PRINTZFRAC ENDP
+    461
+    462	    02B6			 CSEG ENDS
+    463					 END MAIN
+Turbo Assembler	 Version 2.51	     01/06/22 21:11:29	    Page 10
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??0000				  Near	 CSEG:0125
+??0001				  Near	 CSEG:012C
+??0002				  Near	 CSEG:0139
+??0003				  Near	 CSEG:0164
+??0004				  Near	 CSEG:016B
+??0005				  Near	 CSEG:0178
+??0006				  Near	 CSEG:019B
+??0007				  Near	 CSEG:01A2
+??0008				  Near	 CSEG:01AF
+??0009				  Near	 CSEG:0225
+??000A				  Near	 CSEG:022C
+??000B				  Near	 CSEG:0239
+??000C				  Near	 CSEG:0264
+??000D				  Near	 CSEG:026B
+??000E				  Near	 CSEG:0278
+??DATE				  Text	 "01/06/22"
+??FILENAME			  Text	 "3m	  "
+??TIME				  Text	 "21:11:29"
+??VERSION			  Number 0205
+@CPU				  Text	 0D0FH
+@CURSEG				  Text	 CSEG
+@FILENAME			  Text	 3M
+@WORDSIZE			  Text	 4
+A1				  Near	 CSEG:0045
+A2				  Near	 CSEG:004A
+A3				  Near	 CSEG:0094
+CALCULATE			  Near	 CSEG:0098
+CALCULATE1			  Near	 CSEG:00B5
+CALCULATE2			  Near	 CSEG:0185
+CALCULATE3			  Near	 CSEG:01B5
+CONVERTATION			  Near	 CSEG:003A
+CONVERTATIONCORRECT		  Word	 DSEG:0088
+CURRENTDIGIT			  Word	 DSEG:0080
+CURRENTPART			  Word	 DSEG:0082
+DIVTOMESSAGE			  Byte	 DSEG:0066
+ERR1				  Near	 CSEG:0181
+ERR3				  Near	 CSEG:0281
+ERROR				  Near	 CSEG:0073
+ERRORMESSAGE			  Byte	 DSEG:003E
+EXP1PART1			  Word	 DSEG:0074
+EXP1PART2			  Word	 DSEG:0076
+EXP3PART1			  Word	 DSEG:0078
+EXP3PART2			  Word	 DSEG:007A
+EXPRESSION1			  Near	 CSEG:00A9
+EXPRESSION2			  Near	 CSEG:00AD
+EXPRESSION3			  Near	 CSEG:00B1
+FRACMESSAGE			  Byte	 DSEG:0050
+FRACTIONALRESULT		  Word	 DSEG:0084
+INCORRECT			  Near	 CSEG:0029
+INTGLOBAL			  Word	 DSEG:007C
+M4				  Near	 CSEG:029C
+M5				  Near	 CSEG:02A3
+M6				  Near	 CSEG:02B0
+MAIN				  Far	 CSEG:0000
+Turbo Assembler	 Version 2.51	     01/06/22 21:11:29	    Page 11
+Symbol Table
+
+
+
+MIN				  Near	 CSEG:007D
+MINNUM				  Number -8000
+NEGATIVE			  Near	 CSEG:0089
+PRINTERROR			  Near	 CSEG:002F
+PRINTNEWLINE			  Near	 CSEG:002A
+PRINTZFRAC			  Near	 CSEG:0285
+REMNANTGLOBAL			  Word	 DSEG:007E
+RESULTMESSAGE			  Byte	 DSEG:0060
+STARTMESSAGE			  Byte	 DSEG:0000
+TOCOMP				  Number 0000
+X				  Word	 DSEG:0070
+XSTRING				  Byte	 DSEG:008A
+Z				  Word	 DSEG:0072
+ZFRAC				  Word	 DSEG:0086
+
+Macro Name
+
+PRINTZ
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+CSEG				  16  02B6 Para	  Public  CODE
+DSEG				  16  0093 Para	  Public  DATA
+STSEG				  16  0140 Para	  Stack	  STACK
+
